@@ -1,0 +1,29 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cube Platformer Evolution</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="500"></canvas>
+    <label>Mutation Rate: <input type="range" id="mutationRate" min="0" max="1" step="0.01" value="0.1"></label>
+    <label>Mutation Strength: <input type="range" id="mutationStrength" min="0" max="1" step="0.01" value="0.2"></label>
+    <button id="saveBest">Save Best Brain</button>
+    <button id="loadBest">Load Best Brain</button>
+    <button id="toggleReplay">Toggle Replay Mode</button>
+    <button id="toggleSensors">Toggle Sensors</button>
+    <script src="utils.js"></script>
+    <script src="network.js"></script>
+    <script src="ga.js"></script>
+    <script src="level.js"></script>
+    <script src="sensor.js"></script>
+    <script src="cube.js"></script>
+    <script src="visualizer.js"></script>
+    <script src="main.js"></script>
+</body>
+
+</html>
