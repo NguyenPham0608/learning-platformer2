@@ -44,7 +44,7 @@ class Cube {
         this.y += this.velY * dt;
 
         // Friction
-        this.velX *= 0.95;
+        this.velX *= 0.965;
 
         // Collision with platforms
         this.onGround = false;
@@ -86,20 +86,21 @@ class Cube {
 
     getFitness() {
         let distance = this.maxX - startX;
-        let fitness = Math.pow(distance, 1.5);
+        let fitness = Math.pow(distance, 2); // Increased exponent for more reward on larger distances
         if (this.maxX >= finishX) {
-            fitness += 100000 / (this.timeAlive + 1); // Reward reaching fast
+            fitness += 1000000 / (this.timeAlive + 1); // Increased bonus for reaching fast
         } else {
-            fitness += this.timeAlive; // Minor reward for surviving longer without reaching
+            fitness += distance / (this.timeAlive + 1) * 100; // Reward speed even if not reaching
             if (!this.alive) {
-                fitness -= 1000; // Penalty for dying without reaching
+                fitness -= 5000; // Increased penalty for dying without reaching
             }
             if (this.diedByFalling) {
-                fitness -= 2000; // Extra penalty for falling into the abyss
+                fitness -= 10000; // Increased extra penalty for falling into the abyss
             }
         }
         fitness -= this.stagnationTime * 100; // Penalty for stagnation
-        fitness -= this.jumpCount * 70; // Penalty for excessive jumps
+        fitness -= this.jumpCount * 50; // Penalty for excessive jumps
+        fitness -= this.timeAlive * 10; // Penalty for simply existing (time cost to motivate quicker progress)
         return fitness;
     }
 }
