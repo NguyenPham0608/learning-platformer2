@@ -2,7 +2,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const popSize = 900;
-const ga = new GeneticAlgorithm(popSize, 7, 8, 3, 0.1, 0.2);
+const ga = new GeneticAlgorithm(popSize, 5, 8, 3);
 let cubes = [];
 let bestCube = null;
 let simTime = 0;
@@ -10,14 +10,6 @@ const maxSimTime = 60;
 let replayMode = false;
 let showSensors = false;
 let cameraX = 0;
-
-document.getElementById('mutationRate').addEventListener('input', (e) => {
-    ga.mutationRate = parseFloat(e.target.value);
-});
-
-document.getElementById('mutationStrength').addEventListener('input', (e) => {
-    ga.mutationStrength = parseFloat(e.target.value);
-});
 
 document.getElementById('saveBest').addEventListener('click', () => {
     if (bestCube) {
@@ -31,7 +23,7 @@ document.getElementById('loadBest').addEventListener('click', () => {
     if (saved) {
         const loadedBrain = JSON.parse(saved);
         // Reconstruct NeuralNetwork from JSON
-        const nn = new NeuralNetwork(7, 8, 3);
+        const nn = new NeuralNetwork(5, 8, 3);
         Object.assign(nn, loadedBrain);
         ga.population[0] = nn; // Replace first
         alert('Best brain loaded into population!');

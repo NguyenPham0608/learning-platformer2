@@ -1,27 +1,22 @@
 // level.js
 const platforms = [
-    { x: 0, width: 500, y: 400 }, // Starting ground
-    { x: 600, width: 200, y: 400 }, // After small gap
-    { x: 850, width: 150, y: 350 }, // Raised platform
-    { x: 1050, width: 300, y: 400 }, // Ground with spike
-    { x: 1400, width: 100, y: 300 }, // High small platform
-    { x: 1550, width: 250, y: 400 }, // Ground after jump
-    { x: 1850, width: 200, y: 350 }, // Raised with spike
-    { x: 2100, width: 400, y: 400 }, // Long ground
-    { x: 2550, width: 150, y: 300 }, // High platform
-    { x: 2750, width: 300, y: 400 }, // Ground with lava-like hazard
-    { x: 3100, width: 200, y: 350 }, // Raised
-    { x: 3350, width: 250, y: 400 }, // Final ground before finish
+    { x: 0, width: 400, y: 400 }, // Ground
+    { x: 500, width: 200, y: 400 }, // After gap
+    { x: 750, width: 150, y: 350 }, // Raised platform
+    { x: 950, width: 300, y: 400 }, // More ground
+    { x: 1300, width: 200, y: 300 }, // Higher platform
+    { x: 1550, width: 250, y: 400 }, // Ground again
+    { x: 1850, width: 150, y: 350 }, // Small raised
+    { x: 2050, width: 400, y: 400 }, // Long ground
+    { x: 2500, width: 200, y: 400 }, // After another gap
+    { x: 2750, width: 300, y: 350 }, // Raised
 ];
 
 const hazards = [
-    { x: 1100, width: 50, y: 400, height: 20 }, // Spike on platform
-    { x: 1900, width: 50, y: 350, height: 20 }, // Spike on raised
-    { x: 2800, width: 100, y: 400, height: 20 }, // Lava-like wide spike
-    { x: 2400, width: 50, y: 400, height: 20 }, // Spike in long ground
+    // Optional spikes: { x: 600, width: 50, y: 400, height: 20 },
 ];
 
-const finishX = 3600;
+const finishX = 3000;
 const deathY = 600;
 const startX = 50;
 const startY = 380; // Above first platform
@@ -52,26 +47,4 @@ function checkHazardCollision(cube) {
         }
     }
     return false;
-}
-
-function getNextHazardDist(scanX, currentY) {
-    const maxHazardDist = 300;
-    let distToHazard = maxHazardDist;
-
-    for (let d = 1; d <= maxHazardDist; d++) {
-        const nx = scanX + d;
-        let inHazard = false;
-        for (let haz of hazards) {
-            if (nx >= haz.x && nx < haz.x + haz.width &&
-                currentY >= haz.y - haz.height && currentY <= haz.y) {
-                inHazard = true;
-                break;
-            }
-        }
-        if (inHazard) {
-            distToHazard = d;
-            break;
-        }
-    }
-    return distToHazard;
 }

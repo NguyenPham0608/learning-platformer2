@@ -99,7 +99,7 @@ class Cube {
             }
         }
         fitness -= this.stagnationTime * 100; // Penalty for stagnation
-        fitness -= this.jumpCount * 50; // Penalty for excessive jumps
+        fitness -= this.jumpCount * 70; // Penalty for excessive jumps
         return fitness;
     }
 }
