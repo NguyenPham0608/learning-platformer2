@@ -11,10 +11,49 @@ let startY = 380;
 function getFloorY(atX) {
     let bestY = Infinity;
     for (let plat of platforms) {
+        const isHorizontal = plat.y1 === plat.y2;
+        if (!isHorizontal) continue;
+
         const minX = Math.min(plat.x1, plat.x2);
         const maxX = Math.max(plat.x1, plat.x2);
         if (atX >= minX && atX <= maxX) {
             if (plat.y1 < bestY) bestY = plat.y1;
+        }
+    }
+    return bestY;
+}
+
+function getFloorYBelow(atX, belowY) {
+    let bestY = Infinity;
+    for (let plat of platforms) {
+        const isHorizontal = plat.y1 === plat.y2;
+        if (!isHorizontal) continue;
+
+        const minX = Math.min(plat.x1, plat.x2);
+        const maxX = Math.max(plat.x1, plat.x2);
+        if (atX >= minX && atX <= maxX) {
+            // Only count platforms below the given Y
+            if (plat.y1 > belowY && plat.y1 < bestY) {
+                bestY = plat.y1;
+            }
+        }
+    }
+    return bestY;
+}
+
+function getCeilingY(atX, aboveY) {
+    let bestY = -Infinity;
+    for (let plat of platforms) {
+        const isHorizontal = plat.y1 === plat.y2;
+        if (!isHorizontal) continue;
+
+        const minX = Math.min(plat.x1, plat.x2);
+        const maxX = Math.max(plat.x1, plat.x2);
+        if (atX >= minX && atX <= maxX) {
+            // Only count platforms above the given Y
+            if (plat.y1 < aboveY && plat.y1 > bestY) {
+                bestY = plat.y1;
+            }
         }
     }
     return bestY;

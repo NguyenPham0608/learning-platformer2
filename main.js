@@ -1,8 +1,8 @@
 // main.js
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-const popSize = 900;
-const ga = new GeneticAlgorithm(popSize, 8, 8, 3);
+const popSize = 1600;
+const ga = new GeneticAlgorithm(popSize, 14, 16, 3);
 let cubes = [];
 let bestCube = null;
 let simTime = 0;
@@ -23,7 +23,7 @@ document.getElementById('loadBest').addEventListener('click', () => {
     if (saved) {
         const loadedBrain = JSON.parse(saved);
         // Reconstruct NeuralNetwork from JSON
-        const nn = new NeuralNetwork(8, 8, 3);
+        const nn = new NeuralNetwork(14, 16, 3);
         Object.assign(nn, loadedBrain);
         ga.population[0] = nn; // Replace first
         alert('Best brain loaded into population!');
@@ -129,7 +129,7 @@ function draw() {
     ctx.fillStyle = 'black';
     ctx.font = '20px Arial';
     ctx.fillText(`Generation: ${ga.generation}`, 10, 30);
-    ctx.fillText(`Best Distance: ${Math.floor(bestCube.maxX - startX)}`, 10, 60);
+    ctx.fillText(`Best Progress: ${Math.floor(bestCube.totalProgress)}`, 10, 60);
     ctx.fillText(replayMode ? 'Replay Mode' : 'Training Mode', 10, 90);
     drawEditorOverlay();
 }

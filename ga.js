@@ -12,15 +12,23 @@ class GeneticAlgorithm {
     }
 
     nextGeneration(fitnesses) {
-        // Pair brains with fitness
         let paired = this.population.map((brain, index) => ({ brain, fitness: fitnesses[index] }));
         paired.sort((a, b) => b.fitness - a.fitness);
 
-        // Elitism: keep top 20%
-        const eliteCount = Math.floor(this.popSize * 0.2);
+        const eliteCount = Math.floor(this.popSize * 0.1);
         let newPopulation = paired.slice(0, eliteCount).map(p => p.brain.clone());
 
-        // Fill the rest with mutated clones from elite
+        // Add some completely random brains for exploration
+        const randomCount = Math.floor(this.popSize * 0.1);
+        for (let i = 0; i < randomCount; i++) {
+            newPopulation.push(new NeuralNetwork(
+                paired[0].brain.inputNodes,
+                paired[0].brain.hiddenNodes,
+                paired[0].brain.outputNodes
+            ));
+        }
+
+        // Fill rest with mutated elites
         while (newPopulation.length < this.popSize) {
             const parentIndex = Math.floor(Math.random() * eliteCount);
             const child = paired[parentIndex].brain.clone();
