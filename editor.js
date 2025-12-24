@@ -17,8 +17,12 @@ document.getElementById('toolSelect').addEventListener('change', (e) => {
 
 document.getElementById('clearLevel').addEventListener('click', () => {
     if (confirm('Clear level?')) {
-        platforms = [];
+        platforms = [{ x1: 0, y1: 400, x2: 400, y2: 400 }];
         hazards = [];
+        startX = 50;
+        startY = 380;
+        finishX = 3000;
+        localStorage.removeItem('savedLevel');
     }
 });
 
@@ -48,16 +52,18 @@ canvas.addEventListener('mousedown', (e) => {
     if (currentTool === 'start') {
         startX = x;
         startY = y;
+        saveLevel();
     } else if (currentTool === 'finish') {
         finishX = x;
+        saveLevel();
     } else if (currentTool === 'erase') {
         eraseAt(x, y);
+        saveLevel();
     } else {
         isDrawing = true;
         drawStart = { x, y };
     }
 });
-
 canvas.addEventListener('mouseup', (e) => {
     if (!editorMode || !isDrawing) return;
     const rect = canvas.getBoundingClientRect();
@@ -80,6 +86,7 @@ canvas.addEventListener('mouseup', (e) => {
         } else if (currentTool === 'hazard') {
             hazards.push(line);
         }
+        saveLevel();
     }
 
     isDrawing = false;

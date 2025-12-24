@@ -116,3 +116,33 @@ function checkWallCollision(cube, newX) {
     }
     return { hit: false };
 }
+
+// Add at the end of level.js
+
+function saveLevel() {
+    const levelData = {
+        platforms: platforms,
+        hazards: hazards,
+        startX: startX,
+        startY: startY,
+        finishX: finishX
+    };
+    localStorage.setItem('savedLevel', JSON.stringify(levelData));
+}
+
+function loadLevel() {
+    const saved = localStorage.getItem('savedLevel');
+    if (saved) {
+        const levelData = JSON.parse(saved);
+        platforms = levelData.platforms || [{ x1: 0, y1: 400, x2: 400, y2: 400 }];
+        hazards = levelData.hazards || [];
+        startX = levelData.startX || 50;
+        startY = levelData.startY || 380;
+        finishX = levelData.finishX || 3000;
+        return true;
+    }
+    return false;
+}
+
+// Load level on startup
+loadLevel();

@@ -73,7 +73,11 @@ function update(dt) {
     }
 
     // Update best
-    bestCube = cubes.reduce((best, current) => (current.maxX > best.maxX ? current : best), cubes[0]);
+    bestCube = cubes.reduce((best, current) => {
+        if (!current.alive && best.alive) return best;
+        if (current.alive && !best.alive) return current;
+        return (current.visitedRight > best.visitedRight ? current : best);
+    }, cubes[0]);
 
     // Camera follow best
     cameraX = Math.max(0, bestCube.x - canvas.width / 4);
