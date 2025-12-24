@@ -2,7 +2,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const popSize = 900;
-const ga = new GeneticAlgorithm(popSize, 5, 8, 3);
+const ga = new GeneticAlgorithm(popSize, 8, 8, 3);
 let cubes = [];
 let bestCube = null;
 let simTime = 0;
@@ -23,7 +23,7 @@ document.getElementById('loadBest').addEventListener('click', () => {
     if (saved) {
         const loadedBrain = JSON.parse(saved);
         // Reconstruct NeuralNetwork from JSON
-        const nn = new NeuralNetwork(5, 8, 3);
+        const nn = new NeuralNetwork(8, 8, 3);
         Object.assign(nn, loadedBrain);
         ga.population[0] = nn; // Replace first
         alert('Best brain loaded into population!');
@@ -49,6 +49,8 @@ function initGeneration() {
 }
 
 function update(dt) {
+    if (editorMode) return;
+
     simTime += dt;
     let allDead = true;
 
@@ -81,15 +83,23 @@ function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw platforms
-    ctx.fillStyle = 'green';
+    ctx.strokeStyle = 'green';
+    ctx.lineWidth = 5;
     for (let plat of platforms) {
-        ctx.fillRect(plat.x - cameraX, plat.y, plat.width, 5);
+        ctx.beginPath();
+        ctx.moveTo(plat.x1 - cameraX, plat.y1);
+        ctx.lineTo(plat.x2 - cameraX, plat.y2);
+        ctx.stroke();
     }
 
     // Draw hazards
-    ctx.fillStyle = 'red';
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 5;
     for (let haz of hazards) {
-        ctx.fillRect(haz.x - cameraX, haz.y - haz.height, haz.width, haz.height);
+        ctx.beginPath();
+        ctx.moveTo(haz.x1 - cameraX, haz.y1);
+        ctx.lineTo(haz.x2 - cameraX, haz.y2);
+        ctx.stroke();
     }
 
     // Draw finish
@@ -121,6 +131,7 @@ function draw() {
     ctx.fillText(`Generation: ${ga.generation}`, 10, 30);
     ctx.fillText(`Best Distance: ${Math.floor(bestCube.maxX - startX)}`, 10, 60);
     ctx.fillText(replayMode ? 'Replay Mode' : 'Training Mode', 10, 90);
+    drawEditorOverlay();
 }
 
 let lastTime = 0;

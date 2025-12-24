@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Cube Platformer Evolution</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -14,6 +14,15 @@
     <button id="loadBest">Load Best Brain</button>
     <button id="toggleReplay">Toggle Replay Mode</button>
     <button id="toggleSensors">Toggle Sensors</button>
+    <button id="toggleEditor">Toggle Editor</button>
+    <button id="clearLevel">Clear Level</button>
+    <select id="toolSelect">
+        <option value="platform">Platform</option>
+        <option value="hazard">Hazard</option>
+        <option value="start">Start Point</option>
+        <option value="finish">Finish Line</option>
+        <option value="erase">Eraser</option>
+    </select>
     <script src="utils.js"></script>
     <script src="network.js"></script>
     <script src="ga.js"></script>
@@ -21,6 +30,7 @@
     <script src="sensor.js"></script>
     <script src="cube.js"></script>
     <script src="visualizer.js"></script>
+    <script src="editor.js"></script>
     <script src="main.js"></script>
 </body>
 

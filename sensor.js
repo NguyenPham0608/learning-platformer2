@@ -4,45 +4,74 @@ const maxHeightDiff = 100;
 const maxVelY = 10;
 
 function getSensors(cube) {
-    const scanX = cube.x; // Center
+    const scanX = cube.x;
     const currentY = getFloorY(scanX);
     if (currentY === Infinity) {
-        return [0, -1, 0, cube.velY / maxVelY, 0]; // Dead anyway
+        return [0, 0, 0, 0, 0, 0, cube.velY / maxVelY, 0]; // 8 inputs now
     }
 
-    let distToEdge = maxSensorDist;
-    let heightDiff = 0;
-    let distToGap = maxSensorDist;
+    // === RIGHT-SIDE SENSORS ===
+    let distToEdgeR = maxSensorDist;
+    let heightDiffR = 0;
+    let distToGapR = maxSensorDist;
 
-    // Scan for next edge (change in floor Y)
     let prevY = currentY;
     for (let d = 1; d <= maxSensorDist; d++) {
         const nx = scanX + d;
         const ny = getFloorY(nx);
         if (ny !== prevY) {
-            distToEdge = d;
-            heightDiff = (ny === Infinity) ? -maxHeightDiff : (ny - currentY);
-            prevY = ny;
+            distToEdgeR = d;
+            heightDiffR = (ny === Infinity) ? -maxHeightDiff : (ny - currentY);
             break;
         }
     }
 
-    // Scan for next gap (to Infinity)
     for (let d = 1; d <= maxSensorDist; d++) {
         const nx = scanX + d;
         const ny = getFloorY(nx);
         if (ny === Infinity) {
-            distToGap = d;
+            distToGapR = d;
             break;
         }
     }
 
-    // Normalize
-    const normDistEdge = distToEdge / maxSensorDist;
-    const normHeightDiff = Math.max(Math.min(heightDiff / maxHeightDiff, 1), -1);
-    const normDistGap = distToGap / maxSensorDist;
+    // === LEFT-SIDE SENSORS ===
+    let distToEdgeL = maxSensorDist;
+    let heightDiffL = 0;
+    let distToGapL = maxSensorDist;
+
+    prevY = currentY;
+    for (let d = 1; d <= maxSensorDist; d++) {
+        const nx = scanX - d; // Scan LEFT
+        const ny = getFloorY(nx);
+        if (ny !== prevY) {
+            distToEdgeL = d;
+            heightDiffL = (ny === Infinity) ? -maxHeightDiff : (ny - currentY);
+            break;
+        }
+    }
+
+    for (let d = 1; d <= maxSensorDist; d++) {
+        const nx = scanX - d; // Scan LEFT
+        const ny = getFloorY(nx);
+        if (ny === Infinity) {
+            distToGapL = d;
+            break;
+        }
+    }
+
+    // Normalize all values
+    const normDistEdgeR = distToEdgeR / maxSensorDist;
+    const normHeightDiffR = Math.max(Math.min(heightDiffR / maxHeightDiff, 1), -1);
+    const normDistGapR = distToGapR / maxSensorDist;
+
+    const normDistEdgeL = distToEdgeL / maxSensorDist;
+    const normHeightDiffL = Math.max(Math.min(heightDiffL / maxHeightDiff, 1), -1);
+    const normDistGapL = distToGapL / maxSensorDist;
+
     const normVelY = Math.max(Math.min(cube.velY / maxVelY, 1), -1);
     const onGround = cube.onGround ? 1 : 0;
 
-    return [normDistEdge, normHeightDiff, normDistGap, normVelY, onGround];
+    // 8 inputs: [rightEdge, rightHeight, rightGap, leftEdge, leftHeight, leftGap, velY, onGround]
+    return [normDistEdgeR, normHeightDiffR, normDistGapR, normDistEdgeL, normHeightDiffL, normDistGapL, normVelY, onGround];
 }

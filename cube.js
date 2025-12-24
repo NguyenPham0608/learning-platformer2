@@ -26,13 +26,12 @@ class Cube {
         if (!this.alive) return;
 
         const outputs = this.think();
-        const moveForce = outputs[1] - outputs[0]; // right - left, -1 to 1
+        const moveForce = outputs[1] - outputs[0];
         const jump = outputs[2] > 0.5 && this.onGround;
 
         const accel = 1000;
         this.velX += moveForce * accel * dt;
-
-        this.velY += 980 * dt; // Gravity
+        this.velY += 980 * dt;
 
         if (jump) {
             this.velY = -400;
@@ -40,13 +39,20 @@ class Cube {
             this.jumpCount++;
         }
 
-        this.x += this.velX * dt;
-        this.y += this.velY * dt;
+        // Move X with wall collision
+        const newX = this.x + this.velX * dt;
+        const wallHit = checkWallCollision(this, newX);
+        if (wallHit.hit) {
+            this.x = wallHit.x;
+            this.velX = 0;
+        } else {
+            this.x = newX;
+        }
 
-        // Friction
+        this.y += this.velY * dt;
         this.velX *= 0.965;
 
-        // Collision with platforms
+        // Floor collision
         this.onGround = false;
         if (this.velY >= 0) {
             const floorY = getFloorY(this.x);
@@ -57,18 +63,15 @@ class Cube {
             }
         }
 
-        // Check hazards
         if (checkHazardCollision(this)) {
             this.alive = false;
         }
 
-        // Check death by fall
         if (this.y > deathY) {
             this.alive = false;
             this.diedByFalling = true;
         }
 
-        // Update maxX
         if (this.x > this.maxX) {
             this.maxX = this.x;
             this.stagnationTime = 0;
@@ -78,7 +81,6 @@ class Cube {
 
         this.timeAlive += dt;
 
-        // Stagnation penalty: die if no progress for 5 seconds
         if (this.stagnationTime > 5) {
             this.alive = false;
         }

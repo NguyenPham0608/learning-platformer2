@@ -60,21 +60,36 @@ function drawNeuralNetwork(ctx, network, x, y, width, height) {
 }
 
 function drawSensors(ctx, cube, cameraX) {
-    const [distEdge, heightDiff, distGap, ,] = getSensors(cube);
+    const sensors = getSensors(cube);
+    const [distEdgeR, , distGapR, distEdgeL, , distGapL] = sensors;
     const scanX = cube.x - cameraX;
     const scanY = cube.y;
 
-    // Draw line to next edge
+    // Right edge sensor
     ctx.strokeStyle = 'blue';
     ctx.beginPath();
     ctx.moveTo(scanX, scanY);
-    ctx.lineTo(scanX + distEdge * maxSensorDist, scanY);
+    ctx.lineTo(scanX + distEdgeR * maxSensorDist, scanY);
     ctx.stroke();
 
-    // Draw line to gap
+    // Right gap sensor
     ctx.strokeStyle = 'red';
     ctx.beginPath();
     ctx.moveTo(scanX, scanY);
-    ctx.lineTo(scanX + distGap * maxSensorDist, scanY + 20); // Offset for visibility
+    ctx.lineTo(scanX + distGapR * maxSensorDist, scanY + 15);
+    ctx.stroke();
+
+    // Left edge sensor
+    ctx.strokeStyle = 'cyan';
+    ctx.beginPath();
+    ctx.moveTo(scanX, scanY);
+    ctx.lineTo(scanX - distEdgeL * maxSensorDist, scanY);
+    ctx.stroke();
+
+    // Left gap sensor
+    ctx.strokeStyle = 'orange';
+    ctx.beginPath();
+    ctx.moveTo(scanX, scanY);
+    ctx.lineTo(scanX - distGapL * maxSensorDist, scanY + 15);
     ctx.stroke();
 }
