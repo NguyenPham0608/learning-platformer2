@@ -1,99 +1,78 @@
-// sensor.js
-const maxSensorDist = 200;
-const maxHeightDiff = 100;
-const maxVelY = 500;
+class Sensor {
+    constructor(agent) {
+        this.agent = agent;
+        this.rayCount = 12; // 360 degrees coverage
+        this.rayLength = 150;
+        this.raySpread = Math.PI * 2;
 
-function getSensors(cube) {
-    const scanX = cube.x;
-    const currentY = getFloorY(scanX);
+        this.rays = [];
+        this.readings = [];
+    }
 
-    // Right sensors
-    let distToEdgeR = maxSensorDist;
-    let heightDiffR = 0;
-    let distToGapR = maxSensorDist;
-
-    if (currentY !== Infinity) {
-        for (let d = 1; d <= maxSensorDist; d++) {
-            const ny = getFloorY(scanX + d);
-            if (ny !== currentY) {
-                distToEdgeR = d;
-                heightDiffR = (ny === Infinity) ? -maxHeightDiff : (ny - currentY);
-                break;
-            }
-        }
-        for (let d = 1; d <= maxSensorDist; d++) {
-            if (getFloorY(scanX + d) === Infinity) {
-                distToGapR = d;
-                break;
-            }
+    update(roadBorders) {
+        this.#castRays();
+        this.readings = [];
+        for (let i = 0; i < this.rays.length; i++) {
+            this.readings.push(
+                this.#getReading(this.rays[i], roadBorders)
+            );
         }
     }
 
-    // Left sensors
-    let distToEdgeL = maxSensorDist;
-    let heightDiffL = 0;
-    let distToGapL = maxSensorDist;
-
-    if (currentY !== Infinity) {
-        for (let d = 1; d <= maxSensorDist; d++) {
-            const ny = getFloorY(scanX - d);
-            if (ny !== currentY) {
-                distToEdgeL = d;
-                heightDiffL = (ny === Infinity) ? -maxHeightDiff : (ny - currentY);
-                break;
-            }
+    #getReading(ray, roadBorders) {
+        let touches = [];
+        for (let i = 0; i < roadBorders.length; i++) {
+            const touch = getIntersection(
+                ray[0], ray[1],
+                roadBorders[i][0], roadBorders[i][1]
+            );
+            if (touch) touches.push(touch);
         }
-        for (let d = 1; d <= maxSensorDist; d++) {
-            if (getFloorY(scanX - d) === Infinity) {
-                distToGapL = d;
-                break;
-            }
+
+        if (touches.length == 0) return null;
+
+        const offsets = touches.map(e => e.offset);
+        const minOffset = Math.min(...offsets);
+        return touches.find(e => e.offset == minOffset);
+    }
+
+    #castRays() {
+        this.rays = [];
+        for (let i = 0; i < this.rayCount; i++) {
+            const rayAngle = lerp(
+                this.agent.angle - this.raySpread / 2,
+                this.agent.angle + this.raySpread / 2,
+                this.rayCount == 1 ? 0.5 : i / (this.rayCount - 1)
+            ) + this.agent.angle; // Make it relative to agent rotation? 
+            // Note: Adding agent.angle makes the sensors rotate WITH the agent.
+
+            const start = { x: this.agent.x, y: this.agent.y };
+            const end = {
+                x: this.agent.x - Math.sin(rayAngle) * this.rayLength,
+                y: this.agent.y - Math.cos(rayAngle) * this.rayLength
+            };
+            this.rays.push([start, end]);
         }
     }
 
-    // Wall sensors
-    let wallDistR = maxSensorDist;
-    let wallDistL = maxSensorDist;
-    for (let plat of platforms) {
-        if (plat.x1 !== plat.x2) continue;
-        const wallX = plat.x1;
-        const minY = Math.min(plat.y1, plat.y2);
-        const maxY = Math.max(plat.y1, plat.y2);
-        if (cube.y > minY && cube.y < maxY) {
-            if (wallX > scanX && wallX - scanX < wallDistR) {
-                wallDistR = wallX - scanX;
-            }
-            if (wallX < scanX && scanX - wallX < wallDistL) {
-                wallDistL = scanX - wallX;
-            }
+    draw(ctx) {
+        for (let i = 0; i < this.rayCount; i++) {
+            let end = this.rays[i][1];
+            if (this.readings[i]) end = this.readings[i];
+
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(255,255,0,0.3)";
+            ctx.moveTo(this.rays[i][0].x, this.rays[i][0].y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(0,0,0,0.5)";
+            ctx.moveTo(this.rays[i][1].x, this.rays[i][1].y);
+            ctx.lineTo(end.x, end.y);
+            ctx.stroke();
         }
     }
-
-    // Goal direction
-    let goalDirection = (finishX - cube.x) / 1000;
-    goalDirection = Math.max(-1, Math.min(1, goalDirection));
-
-    // Against wall signals (strong signal to go other way)
-    let againstWallR = cube.againstWallRight ? 1 : 0;
-    let againstWallL = cube.againstWallLeft ? 1 : 0;
-
-    // Current movement direction
-    let movingDir = Math.max(-1, Math.min(1, cube.velX / 200));
-
-    return [
-        distToEdgeR / maxSensorDist,
-        Math.max(-1, Math.min(1, heightDiffR / maxHeightDiff)),
-        distToGapR / maxSensorDist,
-        distToEdgeL / maxSensorDist,
-        Math.max(-1, Math.min(1, heightDiffL / maxHeightDiff)),
-        distToGapL / maxSensorDist,
-        Math.max(-1, Math.min(1, cube.velY / maxVelY)),
-        cube.onGround ? 1 : 0,
-        wallDistR / maxSensorDist,
-        wallDistL / maxSensorDist,
-        goalDirection,
-        againstWallR,
-        againstWallL,
-        movingDir
-    ];
 }

@@ -1,36 +1,332 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
-    <title>Cube Platformer Evolution</title>
-    <link rel="stylesheet" href="styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Maze Navigator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #4af;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .canvas-container {
+            background: #fff;
+            border-radius: 4px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            min-width: 280px;
+        }
+
+        .panel {
+            background: #252545;
+            border-radius: 4px;
+            padding: 12px;
+        }
+
+        .panel h3 {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat {
+            background: #1a1a2e;
+            padding: 8px;
+            border-radius: 3px;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            color: #4af;
+            font-weight: bold;
+        }
+
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        button {
+            background: #4af;
+            color: #000;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #5bf;
+        }
+
+        button.secondary {
+            background: #444;
+            color: #eee;
+        }
+
+        button.secondary:hover {
+            background: #555;
+        }
+
+        button.danger {
+            background: #a44;
+        }
+
+        button.danger:hover {
+            background: #c55;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .checkbox-group input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .slider-group label {
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .slider-group input[type="range"] {
+            width: 100%;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .input-row label {
+            font-size: 0.85rem;
+            min-width: 60px;
+        }
+
+        .input-row input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #444;
+            border-radius: 3px;
+            background: #1a1a2e;
+            color: #eee;
+            font-family: inherit;
+        }
+
+        #savedIndicator {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .help {
+            font-size: 0.8rem;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .help strong {
+            color: #4af;
+        }
+    </style>
 </head>
 
 <body>
-    <canvas id="canvas" width="800" height="500"></canvas>
-    <button id="saveBest">Save Best Brain</button>
-    <button id="loadBest">Load Best Brain</button>
-    <button id="toggleReplay">Toggle Replay Mode</button>
-    <button id="toggleSensors">Toggle Sensors</button>
-    <button id="toggleEditor">Toggle Editor</button>
-    <button id="clearLevel">Clear Level</button>
-    <select id="toolSelect">
-        <option value="platform">Platform</option>
-        <option value="hazard">Hazard</option>
-        <option value="start">Start Point</option>
-        <option value="finish">Finish Line</option>
-        <option value="erase">Eraser</option>
-    </select>
-    <script src="utils.js"></script>
+    <h1>🧠 Neural Maze Navigator</h1>
+
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="mazeCanvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="panel">
+                <h3>Statistics</h3>
+                <div class="stats">
+                    <div class="stat">
+                        <div class="stat-label">Generation</div>
+                        <div class="stat-value" id="generation">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Alive</div>
+                        <div class="stat-value" id="alive">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Best Fitness</div>
+                        <div class="stat-value" id="bestFitness">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Goals Reached</div>
+                        <div class="stat-value" id="goals">0</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Frame</div>
+                        <div class="stat-value" id="frame">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Simulation</h3>
+                <div class="buttons">
+                    <button id="btnStartPause">Start</button>
+                    <button id="btnNextGen" class="secondary">Next Gen</button>
+                    <button id="btnNewMaze" class="secondary">New Maze</button>
+                    <button id="btnReset" class="danger">Reset All</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Brain Storage</h3>
+                <div class="buttons">
+                    <button id="btnSave">Save Best</button>
+                    <button id="btnLoad" class="secondary">Load Brain</button>
+                    <button id="btnClear" class="danger">Clear</button>
+                </div>
+                <div id="savedIndicator">No saved brain</div>
+            </div>
+
+            <div class="panel">
+                <h3>Display</h3>
+                <div class="checkbox-group">
+                    <label>
+                        <input type="checkbox" id="chkSensors">
+                        Show Sensors (Best Agent)
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chkOnlyBest">
+                        Show Only Best Agent
+                    </label>
+                    <label>
+                        <input type="checkbox" id="chkAutoEvolve" checked>
+                        Auto-Evolve Generations
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Speed & Timing</h3>
+                <div class="slider-group">
+                    <label>
+                        <span>Simulation Speed</span>
+                        <span id="speedValue">1x</span>
+                    </label>
+                    <input type="range" id="speedSlider" min="1" max="10" value="1">
+                </div>
+                <div class="slider-group" style="margin-top: 10px;">
+                    <label>
+                        <span>Max Gen Time (frames)</span>
+                        <span id="maxTimeValue">600</span>
+                    </label>
+                    <input type="range" id="maxTime" min="200" max="2000" value="600" step="100">
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Maze Settings</h3>
+                <div class="input-row">
+                    <label>Cols:</label>
+                    <input type="number" id="mazeCols" value="6" min="3" max="20">
+                    <label>Rows:</label>
+                    <input type="number" id="mazeRows" value="6" min="3" max="20">
+                </div>
+                <div class="input-row">
+                    <label>Population:</label>
+                    <input type="number" id="popSize" value="100" min="10" max="500" step="10">
+                </div>
+                <button id="btnApplySize" class="secondary" style="width: 100%;">Apply Maze Size</button>
+            </div>
+
+            <div class="panel">
+                <h3>Quick Guide</h3>
+                <div class="help">
+                    <strong>Curriculum Learning:</strong> Train on small mazes (4x4) first, save the brain, then load it
+                    on larger mazes (8x8, 10x10).<br><br>
+                    <strong>Fitness:</strong> Agents are rewarded for getting closer to the goal and punished for
+                    spinning in place.<br><br>
+                    <strong>Sensors:</strong> 16 rays detect walls + speed + compass to goal.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load modules in order -->
     <script src="network.js"></script>
-    <script src="ga.js"></script>
-    <script src="level.js"></script>
-    <script src="sensor.js"></script>
-    <script src="cube.js"></script>
-    <script src="visualizer.js"></script>
-    <script src="editor.js"></script>
+    <script src="maze.js"></script>
+    <script src="agent.js"></script>
+    <script src="genetic.js"></script>
     <script src="main.js"></script>
 </body>
 

@@ -1,153 +1,320 @@
-// main.js
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const popSize = 1600;
-const ga = new GeneticAlgorithm(popSize, 14, 16, 3);
-let cubes = [];
-let bestCube = null;
-let simTime = 0;
-const maxSimTime = 60;
-let replayMode = false;
-let showSensors = false;
-let cameraX = 0;
+/**
+ * Main Simulation Controller
+ * Handles game loop, UI, and coordinates all modules
+ */
 
-document.getElementById('saveBest').addEventListener('click', () => {
-    if (bestCube) {
-        localStorage.setItem('bestBrain', JSON.stringify(bestCube.brain));
-        alert('Best brain saved!');
+class Simulation {
+    constructor() {
+        // Canvas setup
+        this.canvas = document.getElementById('mazeCanvas');
+        this.ctx = this.canvas.getContext('2d');
+
+        // Configuration
+        this.config = {
+            mazeCols: 6,
+            mazeRows: 6,
+            cellSize: 60,
+            populationSize: 1500,
+            maxGenerationTime: 600, // frames before auto-next generation
+            showSensors: false,
+            showOnlyBest: false,
+            autoEvolve: true,
+            simulationSpeed: 1
+        };
+
+        // Update canvas size based on maze
+        this.#updateCanvasSize();
+
+        // Initialize components
+        this.maze = new Maze(
+            this.config.mazeCols,
+            this.config.mazeRows,
+            this.config.cellSize
+        );
+
+        this.ga = new GeneticAlgorithm({
+            populationSize: this.config.populationSize,
+            eliteCount: 5,
+            mutationRate: 0.3,
+            mutationAmount: 0.3
+        });
+
+        this.agents = [];
+        this.frameCount = 0;
+        this.running = false;
+        this.bestAgent = null;
+
+        // Initialize population
+        this.#initPopulation();
+
+        // Bind UI
+        this.#setupUI();
+
+        // Start loop
+        this.#gameLoop();
     }
-});
 
-document.getElementById('loadBest').addEventListener('click', () => {
-    const saved = localStorage.getItem('bestBrain');
-    if (saved) {
-        const loadedBrain = JSON.parse(saved);
-        // Reconstruct NeuralNetwork from JSON
-        const nn = new NeuralNetwork(14, 16, 3);
-        Object.assign(nn, loadedBrain);
-        ga.population[0] = nn; // Replace first
-        alert('Best brain loaded into population!');
+    #updateCanvasSize() {
+        this.canvas.width = this.config.mazeCols * this.config.cellSize;
+        this.canvas.height = this.config.mazeRows * this.config.cellSize;
     }
-});
 
-document.getElementById('toggleReplay').addEventListener('click', () => {
-    replayMode = !replayMode;
-    initGeneration();
-});
+    #initPopulation(brains = null) {
+        this.agents = [];
 
-document.getElementById('toggleSensors').addEventListener('click', () => {
-    showSensors = !showSensors;
-});
+        for (let i = 0; i < this.config.populationSize; i++) {
+            const brain = brains ? brains[i] : null;
+            const agent = new Agent(
+                this.maze.start.x,
+                this.maze.start.y,
+                this.maze,
+                brain
+            );
+            this.agents.push(agent);
+        }
 
-function initGeneration() {
-    if (replayMode) {
-        cubes = [new Cube(ga.getBestBrain())];
-    } else {
-        cubes = ga.population.map(brain => new Cube(brain));
+        this.frameCount = 0;
+        this.bestAgent = this.agents[0];
     }
-    simTime = 0;
-}
 
-function update(dt) {
-    if (editorMode) return;
+    #gameLoop() {
+        requestAnimationFrame(() => this.#gameLoop());
 
-    simTime += dt;
-    let allDead = true;
+        if (!this.running) return;
 
-    for (let cube of cubes) {
-        if (cube.alive) {
-            cube.update(dt);
-            if (cube.x >= finishX) {
-                cube.alive = false; // Reached end
+        for (let i = 0; i < this.config.simulationSpeed; i++) {
+            this.#update();
+        }
+        this.#render();
+    }
+
+    #update() {
+        this.frameCount++;
+
+        // Update all agents
+        let aliveCount = 0;
+        let bestFitness = -Infinity;
+
+        for (const agent of this.agents) {
+            if (agent.alive) {
+                agent.update();
+                aliveCount++;
             }
-            allDead = false;
+
+            const fitness = agent.getFitness();
+            if (fitness > bestFitness) {
+                bestFitness = fitness;
+                this.bestAgent = agent;
+            }
+        }
+
+        // Check if generation is complete
+        const generationComplete =
+            aliveCount === 0 ||
+            this.frameCount >= this.config.maxGenerationTime ||
+            this.agents.some(a => a.reachedGoal);
+
+        if (generationComplete && this.config.autoEvolve) {
+            this.#nextGeneration();
+        }
+
+        // Update stats display
+        this.#updateStats(aliveCount);
+    }
+
+    #render() {
+        // Clear canvas
+        this.ctx.fillStyle = '#f5f5f5';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw maze
+        this.maze.draw(this.ctx);
+
+        // Draw agents
+        if (this.config.showOnlyBest) {
+            // Only draw best agent
+            if (this.bestAgent) {
+                this.bestAgent.draw(this.ctx, this.config.showSensors);
+            }
+        } else {
+            // Draw all agents (dead ones faded)
+            for (const agent of this.agents) {
+                const isBest = agent === this.bestAgent;
+                agent.draw(this.ctx, isBest && this.config.showSensors);
+            }
+
+            // Draw best on top
+            if (this.bestAgent) {
+                this.bestAgent.draw(this.ctx, this.config.showSensors);
+            }
         }
     }
 
-    if (allDead || simTime > maxSimTime) {
-        if (!replayMode) {
-            const fitnesses = cubes.map(cube => cube.getFitness());
-            ga.nextGeneration(fitnesses);
+    #nextGeneration(regenerateMaze = false) {
+        // Evolve population
+        const newBrains = this.ga.evolve(this.agents);
+
+        // Optionally regenerate maze
+        if (regenerateMaze) {
+            this.maze.generate();
         }
-        initGeneration();
+
+        // Create new population with evolved brains
+        this.#initPopulation(newBrains);
+
+        // Update generation display
+        document.getElementById('generation').textContent = this.ga.generation;
     }
 
-    // Update best
-    bestCube = cubes.reduce((best, current) => {
-        if (!current.alive && best.alive) return best;
-        if (current.alive && !best.alive) return current;
-        return (current.visitedRight > best.visitedRight ? current : best);
-    }, cubes[0]);
+    #updateStats(aliveCount) {
+        document.getElementById('alive').textContent = aliveCount;
+        document.getElementById('frame').textContent = this.frameCount;
+        document.getElementById('bestFitness').textContent =
+            this.bestAgent ? this.bestAgent.getFitness().toFixed(2) : '0';
 
-    // Camera follow best
-    cameraX = Math.max(0, bestCube.x - canvas.width / 4);
+        const goalsReached = this.agents.filter(a => a.reachedGoal).length;
+        document.getElementById('goals').textContent = goalsReached;
+    }
+
+    #setupUI() {
+        // Start/Pause button
+        document.getElementById('btnStartPause').addEventListener('click', () => {
+            this.running = !this.running;
+            document.getElementById('btnStartPause').textContent =
+                this.running ? 'Pause' : 'Start';
+        });
+
+        // Next Generation button
+        document.getElementById('btnNextGen').addEventListener('click', () => {
+            this.#nextGeneration(false);
+        });
+
+        // New Maze button
+        document.getElementById('btnNewMaze').addEventListener('click', () => {
+            this.#nextGeneration(true);
+        });
+
+        // Reset button
+        document.getElementById('btnReset').addEventListener('click', () => {
+            this.ga = new GeneticAlgorithm({
+                populationSize: this.config.populationSize,
+                eliteCount: 5,
+                mutationRate: 0.2,
+                mutationAmount: 0.3
+            });
+            this.maze.generate();
+            this.#initPopulation();
+            document.getElementById('generation').textContent = '0';
+        });
+
+        // Save Brain button
+        document.getElementById('btnSave').addEventListener('click', () => {
+            if (this.bestAgent) {
+                this.ga.saveBrain(this.bestAgent.brain);
+                alert('Best brain saved to localStorage!');
+            }
+        });
+
+        // Load Brain button
+        document.getElementById('btnLoad').addEventListener('click', () => {
+            const brain = this.ga.loadBrain();
+            if (brain) {
+                // Create population with loaded brain as seed
+                const brains = [];
+                for (let i = 0; i < this.config.populationSize; i++) {
+                    const cloned = NeuralNetwork.clone(brain);
+                    if (i > 0) {
+                        // Mutate all but the first (elite)
+                        NeuralNetwork.mutate(cloned, 0.1);
+                    }
+                    brains.push(cloned);
+                }
+                this.#initPopulation(brains);
+                alert('Brain loaded! Population seeded with saved brain.');
+            } else {
+                alert('No saved brain found!');
+            }
+        });
+
+        // Clear Brain button
+        document.getElementById('btnClear').addEventListener('click', () => {
+            if (confirm('Clear saved brain from localStorage?')) {
+                this.ga.clearBrain();
+                alert('Saved brain cleared!');
+            }
+        });
+
+        // Show Sensors toggle
+        document.getElementById('chkSensors').addEventListener('change', (e) => {
+            this.config.showSensors = e.target.checked;
+        });
+
+        // Show Only Best toggle
+        document.getElementById('chkOnlyBest').addEventListener('change', (e) => {
+            this.config.showOnlyBest = e.target.checked;
+        });
+
+        // Auto Evolve toggle
+        document.getElementById('chkAutoEvolve').addEventListener('change', (e) => {
+            this.config.autoEvolve = e.target.checked;
+        });
+
+        // Speed slider
+        document.getElementById('speedSlider').addEventListener('input', (e) => {
+            this.config.simulationSpeed = parseInt(e.target.value);
+            document.getElementById('speedValue').textContent = e.target.value + 'x';
+        });
+
+        // Maze size controls
+        document.getElementById('mazeCols').addEventListener('change', (e) => {
+            this.config.mazeCols = parseInt(e.target.value);
+        });
+        document.getElementById('mazeRows').addEventListener('change', (e) => {
+            this.config.mazeRows = parseInt(e.target.value);
+        });
+
+        // Apply Maze Size button
+        document.getElementById('btnApplySize').addEventListener('click', () => {
+            this.config.mazeCols = parseInt(document.getElementById('mazeCols').value);
+            this.config.mazeRows = parseInt(document.getElementById('mazeRows').value);
+            this.#updateCanvasSize();
+            this.maze = new Maze(
+                this.config.mazeCols,
+                this.config.mazeRows,
+                this.config.cellSize
+            );
+            // Keep current brains but reset agents for new maze
+            const brains = this.agents.map(a => a.brain);
+            this.#initPopulation(brains);
+        });
+
+        // Population size
+        document.getElementById('popSize').addEventListener('change', (e) => {
+            this.config.populationSize = parseInt(e.target.value);
+            this.ga.populationSize = this.config.populationSize;
+        });
+
+        // Max time slider
+        document.getElementById('maxTime').addEventListener('input', (e) => {
+            this.config.maxGenerationTime = parseInt(e.target.value);
+            document.getElementById('maxTimeValue').textContent = e.target.value;
+        });
+
+        // Update saved brain indicator
+        const hasSaved = this.ga.hasSavedBrain();
+        document.getElementById('savedIndicator').textContent =
+            hasSaved ? '✓ Brain saved' : 'No saved brain';
+    }
+
+    // Public method to start
+    start() {
+        this.running = true;
+        document.getElementById('btnStartPause').textContent = 'Pause';
+    }
 }
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw platforms
-    ctx.strokeStyle = 'green';
-    ctx.lineWidth = 5;
-    for (let plat of platforms) {
-        ctx.beginPath();
-        ctx.moveTo(plat.x1 - cameraX, plat.y1);
-        ctx.lineTo(plat.x2 - cameraX, plat.y2);
-        ctx.stroke();
-    }
-
-    // Draw hazards
-    ctx.strokeStyle = 'red';
-    ctx.lineWidth = 5;
-    for (let haz of hazards) {
-        ctx.beginPath();
-        ctx.moveTo(haz.x1 - cameraX, haz.y1);
-        ctx.lineTo(haz.x2 - cameraX, haz.y2);
-        ctx.stroke();
-    }
-
-    // Draw finish
-    ctx.fillStyle = 'gold';
-    ctx.fillRect(finishX - cameraX, 0, 10, canvas.height);
-
-    // Draw cubes
-    for (let cube of cubes) {
-        if (!cube.alive && !replayMode) continue;
-        ctx.globalAlpha = (cube === bestCube) ? 1 : 0.3;
-        ctx.fillStyle = 'blue';
-        ctx.fillRect(cube.x - cameraX - cube.size / 2, cube.y - cube.size / 2, cube.size, cube.size);
-    }
-    ctx.globalAlpha = 1;
-
-    // Draw sensors for best
-    if (showSensors && bestCube) {
-        drawSensors(ctx, bestCube, cameraX);
-    }
-
-    // Draw NN for best
-    if (bestCube) {
-        drawNeuralNetwork(ctx, bestCube.brain, canvas.width - 300, 10, 280, 200);
-    }
-
-    // Text
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Generation: ${ga.generation}`, 10, 30);
-    ctx.fillText(`Best Progress: ${Math.floor(bestCube.totalProgress)}`, 10, 60);
-    ctx.fillText(replayMode ? 'Replay Mode' : 'Training Mode', 10, 90);
-    drawEditorOverlay();
-}
-
-let lastTime = 0;
-function loop(timestamp) {
-    const dt = (timestamp - lastTime) / 1000;
-    lastTime = timestamp;
-
-    update(dt);
-    draw();
-
-    requestAnimationFrame(loop);
-}
-
-initGeneration();
-requestAnimationFrame(loop);
+// Initialize simulation when page loads
+let simulation;
+window.addEventListener('load', () => {
+    simulation = new Simulation();
+});
