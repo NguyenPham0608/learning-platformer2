@@ -20,7 +20,7 @@ class Agent {
         this.acceleration = 0.15;
         this.friction = 0.98;
         this.rotationSpeed = 0.08;
-        this.angularFriction = 0.8;
+        this.angularFriction = 0.85;
 
         // Sensor configuration
         this.rayCount = 90; // 360° coverage

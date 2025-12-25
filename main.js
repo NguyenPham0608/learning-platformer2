@@ -51,7 +51,7 @@ class Simulation {
         this.#setupUI();
 
         // Start loop
-        this.#gameLoop();
+        setInterval(() => this.#gameLoop(), 1000 / 120);
     }
 
     #updateCanvasSize() {
@@ -78,14 +78,15 @@ class Simulation {
     }
 
     #gameLoop() {
-        requestAnimationFrame(() => this.#gameLoop());
-
         if (!this.running) return;
 
         for (let i = 0; i < this.config.simulationSpeed; i++) {
             this.#update();
         }
-        this.#render();
+
+        if (!document.hidden) {
+            this.#render();
+        }
     }
 
     #update() {
