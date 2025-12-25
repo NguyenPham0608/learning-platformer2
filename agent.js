@@ -15,16 +15,14 @@ class Agent {
         this.angularVelocity = 0;
 
         // Physical properties
-        this.size = 12;
-        this.maxSpeed = 2;
-        this.acceleration = 0.15;
-        this.friction = 0.98;
-        this.rotationSpeed = 0.08;
-        this.angularFriction = 0.85;
-
-        // Sensor configuration
-        this.rayCount = 90; // 360° coverage
-        this.rayLength = 200;
+        this.size = CONFIG.physics.size;
+        this.maxSpeed = CONFIG.physics.maxSpeed;
+        this.acceleration = CONFIG.physics.acceleration;
+        this.friction = CONFIG.physics.friction;
+        this.rotationSpeed = CONFIG.physics.rotationSpeed;
+        this.angularFriction = CONFIG.physics.angularFriction;
+        this.rayCount = CONFIG.sensors.rayCount;
+        this.rayLength = CONFIG.sensors.rayLength;
         this.raySpread = Math.PI * 2; // Full circle
         this.rays = [];
         this.readings = [];
@@ -110,20 +108,20 @@ class Agent {
 
         // Check for stationary behavior
         const moved = Math.abs(this.x - prevX) + Math.abs(this.y - prevY);
-        if (moved < 0.1) {
+        if (moved < CONFIG.culling.stationaryThreshold) {
             this.stationaryTime++;
         } else {
             this.stationaryTime = Math.max(0, this.stationaryTime - 1);
         }
 
         // Kill if stationary too long (spinning prevention)
-        if (this.stationaryTime > 200) {
+        if (this.stationaryTime > CONFIG.culling.stationaryDeathTime) {
             this.alive = false;
         }
         // Kill non-starters at frame 100
-        if (this.age === 100) {
+        if (this.age === CONFIG.culling.earlyDeathFrame) {
             const distFromStart = Math.sqrt((this.x - this.startX) ** 2 + (this.y - this.startY) ** 2);
-            if (distFromStart < this.maze.cellSize * 0.5) {
+            if (distFromStart < this.maze.cellSize * CONFIG.culling.earlyDeathMinDistance) {
                 this.alive = false;
             }
         }
@@ -262,34 +260,42 @@ class Agent {
     }
 
     getFitness() {
-        if (this.reachedGoal) return 100000 + (50000 / this.age);
+        if (this.reachedGoal) {
+            return CONFIG.fitness.goalBaseReward + (CONFIG.fitness.goalSpeedBonus / this.age);
+        }
 
         const distFromStart = this.#getDistanceFromStart();
         let fitness = 0;
 
-        // PRIMARY: Cells explored (rewards full maze coverage)
-        fitness += this.checkpoints.size * 100;
+        // Only reward checkpoints that are FAR from start
+        fitness += this.checkpoints.size * CONFIG.fitness.checkpointReward;
 
-        // SECONDARY: Progress toward goal
         const progressPercent = this.progressMade / this.initialDistToGoal;
-        fitness += progressPercent * 500;
+        fitness += progressPercent * CONFIG.fitness.progressMultiplier;
 
-        // TERTIARY: Survival time (if moving)
-        if (distFromStart > this.maze.cellSize) {
-            fitness += this.age * 0.3;
+        // CHANGED: Only reward survival if actually exploring (2+ cells away)
+        if (distFromStart > this.maze.cellSize * 2) {
+            fitness += this.age * CONFIG.fitness.survivalReward;
         }
 
-        // Penalize spinners
+        // CHANGED: Harsher spinner penalty - make it exponential
         if (distFromStart > 1) {
             const spinRatio = this.totalRotation / distFromStart;
-            if (spinRatio > 1) {
-                fitness *= 0.5 / spinRatio;
+            if (spinRatio > CONFIG.penalties.spinRatioThreshold) {
+                // Exponential penalty for excessive spinning
+                const penalty = Math.pow(CONFIG.penalties.spinPenaltyFactor, spinRatio);
+                fitness *= penalty;
             }
-        } else if (this.age > 100) {
-            fitness *= 0.1;
+        } else if (this.age > CONFIG.penalties.nonMoverAgeCutoff) {
+            fitness *= CONFIG.penalties.nonMoverPenalty;
         }
 
-        return Math.max(0.0001, fitness);
+        // ADDED: Hard cap - spinners near start get almost nothing
+        if (distFromStart < this.maze.cellSize && this.age > 150) {
+            fitness *= 0.01;
+        }
+
+        return Math.max(CONFIG.fitness.minFitness, fitness);
     }
 
     draw(ctx, showSensors = false) {

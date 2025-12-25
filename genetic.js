@@ -58,7 +58,7 @@ class GeneticAlgorithm {
 
         // Fill rest with selection + crossover + mutation
         // Only top 30% can breed
-        const poolSize = Math.max(10, Math.floor(ranked.length * 0.3));
+        const poolSize = Math.max(10, Math.floor(ranked.length * CONFIG.ga.breedingPoolPercent));
         const breedingPool = ranked.slice(0, poolSize);
 
         // Fill rest with selection + crossover + mutation
@@ -86,7 +86,7 @@ class GeneticAlgorithm {
      * Tournament selection
      */
     #selectParent(ranked) {
-        const tournamentSize = 5;
+        const tournamentSize = CONFIG.ga.tournamentSize;
         let best = null;
 
         for (let i = 0; i < tournamentSize; i++) {
