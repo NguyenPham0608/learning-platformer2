@@ -265,11 +265,19 @@ class Agent {
         if (this.reachedGoal) return 100000 + (50000 / this.age);
 
         const distFromStart = this.#getDistanceFromStart();
-        const progressPercent = this.progressMade / this.initialDistToGoal;
-        let fitness = progressPercent * 1000 + this.checkpoints.size * 50;
+        let fitness = 0;
 
-        // Bonus for surviving longer
-        fitness += this.age * 0.5;
+        // PRIMARY: Cells explored (rewards full maze coverage)
+        fitness += this.checkpoints.size * 100;
+
+        // SECONDARY: Progress toward goal
+        const progressPercent = this.progressMade / this.initialDistToGoal;
+        fitness += progressPercent * 500;
+
+        // TERTIARY: Survival time (if moving)
+        if (distFromStart > this.maze.cellSize) {
+            fitness += this.age * 0.3;
+        }
 
         // Penalize spinners
         if (distFromStart > 1) {
