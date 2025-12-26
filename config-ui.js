@@ -39,6 +39,8 @@ const ConfigUI = {
         },
         ga: {
             eliteCount: { min: 1, max: 20, step: 1, label: 'Elite Count' },
+            championOffspring: { min: 0, max: 400, step: 10, label: 'Champion Offspring' },
+            championMutationAmount: { min: 0.05, max: 0.5, step: 0.05, label: 'Champion Mutation' },
             mutationRate: { min: 0.05, max: 0.8, step: 0.05, label: 'Mutation Rate' },
             mutationAmount: { min: 0.05, max: 0.8, step: 0.05, label: 'Mutation Amount' },
             crossoverRate: { min: 0.1, max: 0.9, step: 0.1, label: 'Crossover Rate' },

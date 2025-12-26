@@ -23,7 +23,7 @@ class Agent {
         this.angularFriction = CONFIG.physics.angularFriction;
         this.rayCount = CONFIG.sensors.rayCount;
         this.rayLength = CONFIG.sensors.rayLength;
-        this.raySpread = Math.PI * 2; // Full circle
+        this.raySpread = Math.PI;
         this.rays = [];
         this.readings = [];
 
@@ -332,8 +332,8 @@ class Agent {
             this.#drawSensors(ctx);
         }
 
-        // Draw body (cube/square)
-        const halfSize = this.size / 2;
+        // Draw body (circle)
+        const radius = this.size / 2;
 
         if (this.reachedGoal) {
             ctx.fillStyle = '#0f0';
@@ -347,15 +347,17 @@ class Agent {
         }
 
         ctx.lineWidth = 2;
-        ctx.fillRect(-halfSize, -halfSize, this.size, this.size);
-        ctx.strokeRect(-halfSize, -halfSize, this.size, this.size);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
 
-        // Direction indicator
+        // Direction arrow
         ctx.fillStyle = this.alive ? '#fff' : '#aaa';
         ctx.beginPath();
-        ctx.moveTo(halfSize, 0);
-        ctx.lineTo(halfSize - 4, -3);
-        ctx.lineTo(halfSize - 4, 3);
+        ctx.moveTo(radius + 2, 0);           // Arrow tip
+        ctx.lineTo(radius - 4, -4);          // Top corner
+        ctx.lineTo(radius - 4, 4);           // Bottom corner
         ctx.closePath();
         ctx.fill();
 

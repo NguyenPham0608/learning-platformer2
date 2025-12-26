@@ -57,10 +57,12 @@ const CONFIG = {
     // === GENETIC ALGORITHM ===
     ga: {
         eliteCount: 5,
+        championOffspring: 400,            // Mutated copies of #1 best agent
+        championMutationAmount: 0.15,      // Lower mutation for champion offspring
         mutationRate: 0.3,
         mutationAmount: 0.3,
         crossoverRate: 0.5,
-        breedingPoolPercent: 0.3,       // Top X% can breed
+        breedingPoolPercent: 0.3,
         tournamentSize: 5,
     },
 

@@ -56,6 +56,15 @@ class GeneticAlgorithm {
             newBrains.push(NeuralNetwork.clone(ranked[i].brain));
         }
 
+        // Champion offspring: mutated copies of the best agent
+        const championCount = CONFIG.ga.championOffspring || 0;
+        const championMutation = CONFIG.ga.championMutationAmount || 0.15;
+        for (let i = 0; i < championCount && newBrains.length < this.populationSize; i++) {
+            const child = NeuralNetwork.clone(ranked[0].brain);
+            NeuralNetwork.mutate(child, championMutation);
+            newBrains.push(child);
+        }
+
         // Fill rest with selection + crossover + mutation
         // Only top 30% can breed
         const poolSize = Math.max(10, Math.floor(ranked.length * CONFIG.ga.breedingPoolPercent));
