@@ -28,6 +28,8 @@ class Agent {
         this.readings = [];
         this.wallHits = 0;
         this.invincibleFrames = 60; // Grace period at start
+        this.wallSlideTime = 0;
+        this.wallSlideDistance = 0;
 
         // State
         this.alive = true;
@@ -80,11 +82,6 @@ class Agent {
         const outputs = NeuralNetwork.feedForward(inputs, this.brain);
 
         // Apply outputs to controls
-        // outputs[0]: forward thrust
-        // outputs[1]: backward thrust
-        // outputs[2]: rotate left
-        // outputs[3]: rotate right
-
         const forward = outputs[0];
         const backward = outputs[1];
         const rotateLeft = outputs[2];
@@ -107,17 +104,65 @@ class Agent {
         this.speed *= this.friction;
         this.speed = Math.max(-this.maxSpeed * 0.5, Math.min(this.maxSpeed, this.speed));
 
-        // Update position
+        // Update position with wall sliding
         const prevX = this.x;
         const prevY = this.y;
-        this.x += Math.cos(this.angle) * this.speed;
-        this.y += Math.sin(this.angle) * this.speed;
+        let dx = Math.cos(this.angle) * this.speed;
+        let dy = Math.sin(this.angle) * this.speed;
 
-        const dx = this.x - this.lastX;
-        const dy = this.y - this.lastY;
-        const movementDir = Math.atan2(dy, dx);
+        this.x += dx;
+        this.y += dy;
+
+        // Wall sliding
+        const collision = this.#checkCollision();
+        if (collision) {
+            const wall = collision.wall;
+
+            // Wall direction vector (normalized)
+            const wallDx = wall.x2 - wall.x1;
+            const wallDy = wall.y2 - wall.y1;
+            const wallLen = Math.sqrt(wallDx * wallDx + wallDy * wallDy);
+            const wallNormX = wallDx / wallLen;
+            const wallNormY = wallDy / wallLen;
+
+            // Project velocity onto wall direction (dot product)
+            const dot = dx * wallNormX + dy * wallNormY;
+            const slideDx = wallNormX * dot * 0.7;
+            const slideDy = wallNormY * dot * 0.7;
+
+            // Push away from wall
+            const pushDist = (this.size / 2) - collision.dist + 1;
+            const perpX = -(wallDy / wallLen);
+            const perpY = (wallDx / wallLen);
+
+            // Determine which side to push toward
+            const toCenterX = prevX - this.x;
+            const toCenterY = prevY - this.y;
+            const pushSign = (toCenterX * perpX + toCenterY * perpY) > 0 ? 1 : -1;
+
+            // Apply slide + push
+            this.x = prevX + slideDx + perpX * pushDist * pushSign;
+            this.y = prevY + slideDy + perpY * pushDist * pushSign;
+
+            // Track wall contact
+            this.wallSlideTime++;
+            this.wallSlideDistance += Math.sqrt(slideDx * slideDx + slideDy * slideDy);
+
+            // Reduce speed while sliding
+            this.speed *= 0.85;
+        }
+
+        // Kill if wall-hugging too much
+        if (this.age > 200 && this.wallSlideTime > this.age * 0.5) {
+            this.alive = false;
+        }
+
+        // Track forward movement
+        const moveDx = this.x - this.lastX;
+        const moveDy = this.y - this.lastY;
+        const movementDir = Math.atan2(moveDy, moveDx);
         const angleDiff = Math.abs(movementDir - this.angle);
-        const forwardComponent = Math.cos(angleDiff) * Math.sqrt(dx * dx + dy * dy);
+        const forwardComponent = Math.cos(angleDiff) * Math.sqrt(moveDx * moveDx + moveDy * moveDy);
         if (forwardComponent > 0) {
             this.totalForwardMovement += forwardComponent;
         }
@@ -132,50 +177,36 @@ class Agent {
             this.stationaryTime = Math.max(0, this.stationaryTime - 1);
         }
 
-        // Kill if stationary too long (spinning prevention)
+        // Kill if stationary too long
         if (this.stationaryTime > CONFIG.culling.stationaryDeathTime) {
             this.alive = false;
         }
-        // Kill non-starters at frame 100
+
+        // Kill non-starters at early death frame
         if (this.age === CONFIG.culling.earlyDeathFrame) {
             const distFromStart = Math.sqrt((this.x - this.startX) ** 2 + (this.y - this.startY) ** 2);
             if (distFromStart < this.maze.cellSize * CONFIG.culling.earlyDeathMinDistance) {
                 this.alive = false;
             }
         }
+
         // Track progress
         const distFromStart = this.#getDistanceFromStart();
         this.maxDistanceFromStart = Math.max(this.maxDistanceFromStart, distFromStart);
 
-        const distToGoal = this.maze.getDistanceToGoal(this.x, this.y);
-
-        // Check wall collisions
-        if (this.#checkCollision()) {
-            // Bounce back instead of dying
-            this.x = prevX;
-            this.y = prevY;
-            this.speed *= -0.3;
-
-            // Only count hits after grace period
-            if (this.age > this.invincibleFrames) {
-                this.wallHits++;
-                if (this.wallHits >= 5) {
-                    this.alive = false;
-                }
-            }
-        }
-
         // Check goal
         if (this.maze.isAtGoal(this.x, this.y, this.size)) {
             this.reachedGoal = true;
-            this.alive = false; // Stop updating
+            this.alive = false;
         }
 
+        // Update closest to goal
         const currentDist = this.maze.getDistanceToGoal(this.x, this.y);
         if (currentDist < this.closestToGoal) {
             this.progressMade += (this.closestToGoal - currentDist);
             this.closestToGoal = currentDist;
         }
+
         this.#recordCheckpoint();
     }
 
@@ -244,8 +275,9 @@ class Agent {
     }
 
     #checkCollision() {
-        // Simple circle collision with walls
         const halfSize = this.size / 2;
+        let closestWall = null;
+        let closestDist = Infinity;
 
         for (const wall of this.maze.walls) {
             const dist = this.#pointToLineDistance(
@@ -253,11 +285,13 @@ class Agent {
                 wall.x1, wall.y1,
                 wall.x2, wall.y2
             );
-            if (dist < halfSize) {
-                return true;
+            if (dist < halfSize && dist < closestDist) {
+                closestDist = dist;
+                closestWall = wall;
             }
         }
-        return false;
+
+        return closestWall ? { wall: closestWall, dist: closestDist } : null;
     }
 
     #pointToLineDistance(px, py, x1, y1, x2, y2) {
@@ -317,17 +351,18 @@ class Agent {
             fitness += this.age * CONFIG.fitness.survivalReward;
         }
 
-        // Reward for maintaining distance from walls (sensor-based)
-        let wallAvoidanceScore = 0;
-        for (const reading of this.readings) {
-            wallAvoidanceScore += (reading === null) ? 1 : (1 - reading);
+        // Wall sliding penalty - discourage hugging walls
+        if (this.wallSlideTime > 0) {
+            const slideRatio = this.wallSlideTime / this.age;
+            // Heavy penalty if spending >30% of time on walls
+            if (slideRatio > 0.3) {
+                fitness *= Math.pow(0.5, slideRatio);
+            }
+            // Additional penalty based on slide distance vs progress
+            if (this.wallSlideDistance > this.progressMade * 0.5) {
+                fitness *= 0.7;
+            }
         }
-        wallAvoidanceScore /= this.readings.length;
-        fitness += wallAvoidanceScore * this.age * 0.5;
-
-        // Penalize wall hits
-        fitness *= Math.pow(0.85, this.wallHits);
-
         // Spinner penalty
         if (distFromStart > 1) {
             const spinRatio = this.totalRotation / distFromStart;
