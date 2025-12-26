@@ -22,6 +22,12 @@ class Simulation {
             simulationSpeed: 1
         };
 
+        this.testMode = false;
+        this.testBrain = null;
+        this.showNetwork = false;
+        this.networkCanvas = document.getElementById('networkCanvas');
+        this.networkCtx = this.networkCanvas ? this.networkCanvas.getContext('2d') : null;
+
         // Update canvas size based on maze
         this.#updateCanvasSize();
 
@@ -109,14 +115,37 @@ class Simulation {
             }
         }
 
-        // Check if generation is complete
-        const generationComplete =
-            aliveCount === 0 ||
-            this.frameCount >= this.config.maxGenerationTime ||
-            this.agents.some(a => a.reachedGoal);
+        // Test mode: reset single agent when it dies
+        if (this.testMode) {
+            if (aliveCount === 0) {
+                // Small delay to see the result before resetting
+                if (!this.testResetPending) {
+                    this.testResetPending = true;
+                    setTimeout(() => {
+                        if (this.testMode) {
+                            this.agents = [new Agent(
+                                this.maze.start.x,
+                                this.maze.start.y,
+                                this.maze,
+                                this.testBrain
+                            )];
+                            this.bestAgent = this.agents[0];
+                            this.frameCount = 0;
+                        }
+                        this.testResetPending = false;
+                    }, 1000); // 1 second delay to observe outcome
+                }
+            }
+        } else {
+            // Normal mode: check if generation is complete
+            const generationComplete =
+                aliveCount === 0 ||
+                this.frameCount >= this.config.maxGenerationTime ||
+                this.agents.some(a => a.reachedGoal);
 
-        if (generationComplete && this.config.autoEvolve) {
-            this.#nextGeneration();
+            if (generationComplete && this.config.autoEvolve) {
+                this.#nextGeneration();
+            }
         }
 
         // Update stats display
@@ -149,6 +178,7 @@ class Simulation {
                 this.bestAgent.draw(this.ctx, this.config.showSensors);
             }
         }
+        this.#renderNetwork();
     }
 
     #nextGeneration(regenerateMaze = false) {
@@ -177,6 +207,53 @@ class Simulation {
         document.getElementById('goals').textContent = goalsReached;
     }
 
+    #enterTestMode() {
+        if (!this.bestAgent) {
+            alert('No best agent to test!');
+            return;
+        }
+
+        this.testMode = true;
+        this.testBrain = NeuralNetwork.clone(this.bestAgent.brain);
+
+        // Create single agent with best brain
+        this.agents = [new Agent(
+            this.maze.start.x,
+            this.maze.start.y,
+            this.maze,
+            this.testBrain
+        )];
+        this.bestAgent = this.agents[0];
+        this.frameCount = 0;
+
+        // Update UI
+        document.getElementById('btnTestMode').style.display = 'none';
+        document.getElementById('btnExitTest').style.display = 'inline-block';
+        document.getElementById('testModeInfo').style.display = 'block';
+    }
+
+    #exitTestMode() {
+        this.testMode = false;
+        this.testBrain = null;
+
+        // Restore population
+        this.#initPopulation();
+
+        // Update UI
+        document.getElementById('btnTestMode').style.display = 'inline-block';
+        document.getElementById('btnExitTest').style.display = 'none';
+        document.getElementById('testModeInfo').style.display = 'none';
+    }
+
+    #renderNetwork() {
+        if (!this.showNetwork || !this.networkCtx || !this.bestAgent) return;
+
+        // Get current inputs for the best agent
+        const inputs = this.bestAgent.alive ? this.bestAgent.readings.map(r => r === null ? 1 : 1 - r) : null;
+
+        NeuralNetwork.draw(this.networkCtx, this.bestAgent.brain, inputs);
+    }
+
     #setupUI() {
         // Start/Pause button
         document.getElementById('btnStartPause').addEventListener('click', () => {
@@ -192,7 +269,36 @@ class Simulation {
 
         // New Maze button
         document.getElementById('btnNewMaze').addEventListener('click', () => {
-            this.#nextGeneration(true);
+            if (this.testMode) {
+                // In test mode, just generate new maze and reset test agent
+                this.maze.generate();
+                this.agents = [new Agent(
+                    this.maze.start.x,
+                    this.maze.start.y,
+                    this.maze,
+                    this.testBrain
+                )];
+                this.bestAgent = this.agents[0];
+                this.frameCount = 0;
+            } else {
+                this.#nextGeneration(true);
+            }
+        });
+
+        // Test Mode buttons
+        document.getElementById('btnTestMode').addEventListener('click', () => {
+            this.#enterTestMode();
+        });
+
+        document.getElementById('btnExitTest').addEventListener('click', () => {
+            this.#exitTestMode();
+        });
+
+        // Show Network checkbox
+        document.getElementById('chkShowNetwork').addEventListener('change', (e) => {
+            this.showNetwork = e.target.checked;
+            document.getElementById('networkContainer').style.display =
+                e.target.checked ? 'block' : 'none';
         });
 
         // Reset button

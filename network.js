@@ -114,6 +114,123 @@ class Level {
         return level.outputs;
     }
 
+    static draw(ctx, network, inputs = null) {
+        const width = ctx.canvas.width;
+        const height = ctx.canvas.height;
+        const padding = 30;
+
+        // Clear
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fillRect(0, 0, width, height);
+
+        // Calculate layer sizes
+        const layers = [network.levels[0].inputs.length];
+        for (const level of network.levels) {
+            layers.push(level.outputs.length);
+        }
+
+        const layerCount = layers.length;
+        const layerSpacing = (width - padding * 2) / (layerCount - 1);
+
+        // Calculate neuron positions
+        const positions = [];
+        for (let l = 0; l < layerCount; l++) {
+            const neuronCount = layers[l];
+            const x = padding + l * layerSpacing;
+            const maxVisible = 20; // Cap visible neurons per layer
+            const displayCount = Math.min(neuronCount, maxVisible);
+            const neuronSpacing = (height - padding * 2) / (displayCount + 1);
+
+            positions[l] = [];
+            for (let n = 0; n < displayCount; n++) {
+                const y = padding + (n + 1) * neuronSpacing;
+                positions[l].push({ x, y, index: n });
+            }
+
+            // Add "..." indicator if truncated
+            if (neuronCount > maxVisible) {
+                positions[l].push({ x, y: height - padding / 2, truncated: true, total: neuronCount });
+            }
+        }
+
+        // Draw connections (weights)
+        for (let l = 0; l < network.levels.length; l++) {
+            const level = network.levels[l];
+            const fromPos = positions[l].filter(p => !p.truncated);
+            const toPos = positions[l + 1].filter(p => !p.truncated);
+
+            for (let i = 0; i < fromPos.length; i++) {
+                for (let j = 0; j < toPos.length; j++) {
+                    if (i < level.weights.length && j < level.weights[i].length) {
+                        const weight = level.weights[i][j];
+                        const alpha = Math.min(Math.abs(weight) * 0.5, 0.8);
+
+                        if (weight > 0) {
+                            ctx.strokeStyle = `rgba(100, 200, 255, ${alpha})`;
+                        } else {
+                            ctx.strokeStyle = `rgba(255, 100, 100, ${alpha})`;
+                        }
+
+                        ctx.lineWidth = Math.abs(weight) * 1.5;
+                        ctx.beginPath();
+                        ctx.moveTo(fromPos[i].x, fromPos[i].y);
+                        ctx.lineTo(toPos[j].x, toPos[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        // Draw neurons
+        for (let l = 0; l < layerCount; l++) {
+            for (const pos of positions[l]) {
+                if (pos.truncated) {
+                    // Draw "..." indicator
+                    ctx.fillStyle = '#666';
+                    ctx.font = '10px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(`...${pos.total} total`, pos.x, pos.y);
+                    continue;
+                }
+
+                let activation = 0;
+                if (l === 0 && inputs && pos.index < inputs.length) {
+                    activation = inputs[pos.index];
+                } else if (l > 0 && network.levels[l - 1]) {
+                    const outputs = network.levels[l - 1].outputs;
+                    if (pos.index < outputs.length) {
+                        activation = outputs[pos.index];
+                    }
+                }
+
+                // Color based on activation
+                const r = activation < 0 ? Math.floor(-activation * 200) : 0;
+                const g = activation > 0 ? Math.floor(activation * 200) : 0;
+                const b = 100;
+
+                ctx.fillStyle = `rgb(${50 + r}, ${50 + g}, ${100 + b})`;
+                ctx.strokeStyle = '#4af';
+                ctx.lineWidth = 1;
+
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        }
+
+        // Draw layer labels
+        ctx.fillStyle = '#666';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        const labels = ['Input', ...network.levels.map((_, i) => i === network.levels.length - 1 ? 'Output' : `Hidden ${i + 1}`)];
+        for (let l = 0; l < layerCount; l++) {
+            const x = padding + l * layerSpacing;
+            ctx.fillText(labels[l], x, 15);
+            ctx.fillText(`(${layers[l]})`, x, height - 5);
+        }
+    }
+
     static clone(level) {
         const clone = new Level(level.inputs.length, level.outputs.length);
         clone.biases = [...level.biases];

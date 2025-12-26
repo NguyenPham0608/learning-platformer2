@@ -15,6 +15,9 @@
         <div class="canvas-container">
             <canvas id="mazeCanvas"></canvas>
         </div>
+        <div class="network-container" id="networkContainer" style="display:none;">
+            <canvas id="networkCanvas" width="300" height="400"></canvas>
+        </div>
 
         <div class="controls">
             <div class="panel">
@@ -78,6 +81,22 @@
                         <input type="checkbox" id="chkAutoEvolve" checked>
                         Auto-Evolve Generations
                     </label>
+                    <label>
+                        <input type="checkbox" id="chkShowNetwork">
+                        Show Neural Network
+                    </label>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Test Mode</h3>
+                <div class="buttons">
+                    <button id="btnTestMode">Enter Test Mode</button>
+                    <button id="btnExitTest" class="secondary" style="display:none;">Exit Test Mode</button>
+                </div>
+                <div id="testModeInfo" style="display:none; margin-top:10px;">
+                    <div class="help">Testing best brain on current maze. Generate new mazes to test generalization.
+                    </div>
                 </div>
             </div>
 
