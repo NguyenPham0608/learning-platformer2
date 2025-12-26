@@ -28,6 +28,11 @@ class Simulation {
         this.networkCanvas = document.getElementById('networkCanvas');
         this.networkCtx = this.networkCanvas ? this.networkCanvas.getContext('2d') : null;
 
+        // 3D View setup
+        this.show3D = false;
+        this.view3dCanvas = document.getElementById('view3dCanvas');
+        this.view3d = this.view3dCanvas ? new View3D(this.view3dCanvas) : null;
+
         // Update canvas size based on maze
         this.#updateCanvasSize();
 
@@ -179,6 +184,14 @@ class Simulation {
             }
         }
         this.#renderNetwork();
+        
+        // Render 3D view
+        this.#render3DView();
+    }
+
+    #render3DView() {
+        if (!this.show3D || !this.view3d || !this.bestAgent) return;
+        this.view3d.render(this.bestAgent, this.maze);
     }
 
     #nextGeneration(regenerateMaze = false) {
@@ -298,6 +311,13 @@ class Simulation {
         document.getElementById('chkShowNetwork').addEventListener('change', (e) => {
             this.showNetwork = e.target.checked;
             document.getElementById('networkContainer').style.display =
+                e.target.checked ? 'block' : 'none';
+        });
+
+        // Show 3D View checkbox
+        document.getElementById('chkShow3D').addEventListener('change', (e) => {
+            this.show3D = e.target.checked;
+            document.getElementById('view3dContainer').style.display =
                 e.target.checked ? 'block' : 'none';
         });
 

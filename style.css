@@ -24,11 +24,42 @@ h1 {
     flex-wrap: wrap;
 }
 
+.canvas-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
 .canvas-container {
     background: #fff;
     border-radius: 4px;
     padding: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.view3d-container {
+    background: #0a0a15;
+    position: relative;
+}
+
+.view3d-label {
+    position: absolute;
+    top: 5px;
+    left: 10px;
+    color: #4af;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+#view3dCanvas {
+    display: block;
+    border-radius: 4px;
 }
 
 canvas {
@@ -137,6 +168,14 @@ button.danger:hover {
 .checkbox-group input {
     width: 16px;
     height: 16px;
+}
+
+.highlight-option {
+    background: linear-gradient(90deg, rgba(74, 170, 255, 0.1), transparent);
+    padding: 6px 8px;
+    margin: -6px -8px;
+    border-radius: 3px;
+    border-left: 2px solid #4af;
 }
 
 .slider-group {
@@ -312,4 +351,12 @@ button.danger:hover {
 #testModeInfo {
     font-size: 0.85rem;
     color: #4af;
+}
+
+/* Responsive adjustments for 3D view */
+@media (min-width: 900px) {
+    .canvas-wrapper {
+        flex-direction: row;
+        align-items: flex-start;
+    }
 }

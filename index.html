@@ -6,14 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Neural Maze Navigator</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 
 <body>
     <h1>🧠 Neural Maze Navigator</h1>
 
     <div class="container">
-        <div class="canvas-container">
-            <canvas id="mazeCanvas"></canvas>
+        <div class="canvas-wrapper">
+            <div class="canvas-container">
+                <canvas id="mazeCanvas"></canvas>
+            </div>
+            <div class="canvas-container view3d-container" id="view3dContainer" style="display:none;">
+                <div class="view3d-label">🎮 Agent POV (3D Raycasting)</div>
+                <canvas id="view3dCanvas" width="500" height="375"></canvas>
+            </div>
         </div>
         <div class="network-container" id="networkContainer" style="display:none;">
             <canvas id="networkCanvas" width="300" height="400"></canvas>
@@ -85,6 +92,10 @@
                         <input type="checkbox" id="chkShowNetwork">
                         Show Neural Network
                     </label>
+                    <label class="highlight-option">
+                        <input type="checkbox" id="chkShow3D">
+                        🎮 Show 3D View (Agent POV)
+                    </label>
                 </div>
             </div>
 
@@ -143,7 +154,8 @@
                     on larger mazes (8x8, 10x10).<br><br>
                     <strong>Fitness:</strong> Agents are rewarded for getting closer to the goal and punished for
                     spinning in place.<br><br>
-                    <strong>Sensors:</strong> 16 rays detect walls + speed + compass to goal.
+                    <strong>Sensors:</strong> 16 rays detect walls + speed + compass to goal.<br><br>
+                    <strong>3D View:</strong> Toggle the 3D view to see what the best agent "sees" using raycasting!
                 </div>
             </div>
         </div>
@@ -156,6 +168,7 @@
     <script src="maze.js"></script>
     <script src="agent.js"></script>
     <script src="genetic.js"></script>
+    <script src="view3d.js"></script>
     <script src="main.js"></script>
 </body>
 
