@@ -41,16 +41,21 @@ class Agent {
         this.closestToGoal = this.initialDistToGoal;
         this.progressMade = 0;
 
+        this.totalForwardMovement = 0;
+        this.lastX = x;
+        this.lastY = y;
+
         // Reference to maze
         this.maze = maze;
 
         // Neural network
         // Inputs: rayCount + speed + compass angle
-        const inputCount = this.rayCount + 2;
+        const inputCount = this.rayCount + 4;
         if (brain) {
             this.brain = NeuralNetwork.clone(brain);
         } else {
-            this.brain = new NeuralNetwork([inputCount, 24, 16, 4]);
+            // With 16 rays + 4 other inputs = 20 inputs
+            this.brain = new NeuralNetwork([inputCount, 16, 12, 4]);
         }
 
         // Initialize sensors
@@ -105,6 +110,17 @@ class Agent {
         const prevY = this.y;
         this.x += Math.cos(this.angle) * this.speed;
         this.y += Math.sin(this.angle) * this.speed;
+
+        const dx = this.x - this.lastX;
+        const dy = this.y - this.lastY;
+        const movementDir = Math.atan2(dy, dx);
+        const angleDiff = Math.abs(movementDir - this.angle);
+        const forwardComponent = Math.cos(angleDiff) * Math.sqrt(dx * dx + dy * dy);
+        if (forwardComponent > 0) {
+            this.totalForwardMovement += forwardComponent;
+        }
+        this.lastX = this.x;
+        this.lastY = this.y;
 
         // Check for stationary behavior
         const moved = Math.abs(this.x - prevX) + Math.abs(this.y - prevY);
@@ -164,6 +180,14 @@ class Agent {
         // Compass to goal (normalized -1 to 1)
         const compass = this.maze.getAngleToGoal(this.x, this.y, this.angle);
         inputs.push(compass);
+
+        // NEW: Normalized distance to goal (0 = at goal, 1 = far away)
+        const distToGoal = this.maze.getDistanceToGoal(this.x, this.y);
+        const maxDist = Math.sqrt(this.maze.width ** 2 + this.maze.height ** 2);
+        inputs.push(distToGoal / maxDist);
+
+        // NEW: Angular velocity (helps network learn smooth turning)
+        inputs.push(this.angularVelocity / this.rotationSpeed);
 
         return inputs;
     }
@@ -267,22 +291,23 @@ class Agent {
         const distFromStart = this.#getDistanceFromStart();
         let fitness = 0;
 
-        // Only reward checkpoints that are FAR from start
         fitness += this.checkpoints.size * CONFIG.fitness.checkpointReward;
 
         const progressPercent = this.progressMade / this.initialDistToGoal;
         fitness += progressPercent * CONFIG.fitness.progressMultiplier;
 
-        // CHANGED: Only reward survival if actually exploring (2+ cells away)
+        // NEW: Reward efficient forward movement (not just survival)
+        const movementEfficiency = this.totalForwardMovement / Math.max(1, this.age);
+        fitness += movementEfficiency * 50;
+
         if (distFromStart > this.maze.cellSize * 2) {
             fitness += this.age * CONFIG.fitness.survivalReward;
         }
 
-        // CHANGED: Harsher spinner penalty - make it exponential
+        // Spinner penalty
         if (distFromStart > 1) {
             const spinRatio = this.totalRotation / distFromStart;
             if (spinRatio > CONFIG.penalties.spinRatioThreshold) {
-                // Exponential penalty for excessive spinning
                 const penalty = Math.pow(CONFIG.penalties.spinPenaltyFactor, spinRatio);
                 fitness *= penalty;
             }
@@ -290,7 +315,6 @@ class Agent {
             fitness *= CONFIG.penalties.nonMoverPenalty;
         }
 
-        // ADDED: Hard cap - spinners near start get almost nothing
         if (distFromStart < this.maze.cellSize && this.age > 150) {
             fitness *= 0.01;
         }

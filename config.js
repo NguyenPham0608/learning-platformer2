@@ -6,10 +6,10 @@
 const CONFIG = {
     // === CULLING PARAMETERS ===
     culling: {
-        earlyDeathFrame: 100,           // Frame to check if agent moved
-        earlyDeathMinDistance: 0.5,     // Min distance (as fraction of cellSize) to survive
-        stationaryDeathTime: 200,       // Frames of no movement before death
-        stationaryThreshold: 0.1,       // Movement below this = stationary
+        earlyDeathFrame: 80,              // Kill non-starters earlier
+        earlyDeathMinDistance: 0.3,       // Lower threshold - just need SOME movement
+        stationaryDeathTime: 120,         // Kill stuck agents faster
+        stationaryThreshold: 0.15,        // Slightly more lenient
     },
 
     // === FITNESS REWARDS ===
@@ -50,8 +50,8 @@ const CONFIG = {
 
     // === SENSOR SETTINGS ===
     sensors: {
-        rayCount: 90,
-        rayLength: 200,
+        rayCount: 16,
+        rayLength: 150,
     },
 
     // === GENETIC ALGORITHM ===
@@ -66,7 +66,7 @@ const CONFIG = {
 
     // === NEURAL NETWORK ===
     network: {
-        hiddenLayers: [24, 16],         // Hidden layer sizes
+        hiddenLayers: [16, 12],
     },
 };
 

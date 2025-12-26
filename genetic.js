@@ -86,29 +86,28 @@ class GeneticAlgorithm {
      * Tournament selection
      */
     #selectParent(ranked) {
-        const tournamentSize = CONFIG.ga.tournamentSize;
-        let best = null;
-
-        for (let i = 0; i < tournamentSize; i++) {
-            const idx = Math.floor(Math.random() * ranked.length);
-            if (!best || ranked[idx].fitness > best.fitness) {
-                best = ranked[idx];
-            }
-        }
-
-        return best;
+        // Exponential rank selection - heavily favors top performers
+        const rank = Math.floor(Math.pow(Math.random(), 2) * ranked.length);
+        return ranked[rank];
     }
 
     /**
      * Variable mutation rate for diversity
      */
     #getVariableMutation() {
-        // Mix of small and large mutations
+        // Adapt based on progress
+        const stagnant = this.history.length > 10 &&
+            this.history.slice(-10).every(h => h.goalsReached === 0);
+
+        if (stagnant) {
+            // Population stuck - increase exploration
+            return this.mutationAmount * (1.5 + Math.random());
+        }
+
+        // Normal variable mutation
         if (Math.random() < 0.1) {
-            // Occasionally apply larger mutation for exploration
             return this.mutationAmount * 2;
         } else if (Math.random() < 0.3) {
-            // Sometimes very small tweaks
             return this.mutationAmount * 0.3;
         }
         return this.mutationAmount;
