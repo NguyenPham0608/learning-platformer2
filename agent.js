@@ -26,6 +26,8 @@ class Agent {
         this.raySpread = Math.PI;
         this.rays = [];
         this.readings = [];
+        this.wallHits = 0;
+        this.invincibleFrames = 60; // Grace period at start
 
         // State
         this.alive = true;
@@ -149,7 +151,18 @@ class Agent {
 
         // Check wall collisions
         if (this.#checkCollision()) {
-            this.alive = false;
+            // Bounce back instead of dying
+            this.x = prevX;
+            this.y = prevY;
+            this.speed *= -0.3;
+
+            // Only count hits after grace period
+            if (this.age > this.invincibleFrames) {
+                this.wallHits++;
+                if (this.wallHits >= 5) {
+                    this.alive = false;
+                }
+            }
         }
 
         // Check goal
@@ -303,6 +316,17 @@ class Agent {
         if (distFromStart > this.maze.cellSize * 2) {
             fitness += this.age * CONFIG.fitness.survivalReward;
         }
+
+        // Reward for maintaining distance from walls (sensor-based)
+        let wallAvoidanceScore = 0;
+        for (const reading of this.readings) {
+            wallAvoidanceScore += (reading === null) ? 1 : (1 - reading);
+        }
+        wallAvoidanceScore /= this.readings.length;
+        fitness += wallAvoidanceScore * this.age * 0.5;
+
+        // Penalize wall hits
+        fitness *= Math.pow(0.85, this.wallHits);
 
         // Spinner penalty
         if (distFromStart > 1) {

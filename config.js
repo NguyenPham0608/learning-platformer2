@@ -40,12 +40,12 @@ const CONFIG = {
 
     // === AGENT PHYSICS ===
     physics: {
-        maxSpeed: 2,
-        acceleration: 0.15,
-        friction: 0.98,
-        rotationSpeed: 0.08,
-        angularFriction: 0.85,
-        size: 12,
+        maxSpeed: 1.5,        // was 2 - slower = more control
+        acceleration: 0.1,    // was 0.15
+        friction: 0.96,       // was 0.98 - more drag
+        rotationSpeed: 0.05,  // was 0.08 - less erratic turning
+        angularFriction: 0.8, // was 0.85
+        size: 10,             // was 12 - smaller = more room
     },
 
     // === SENSOR SETTINGS ===
@@ -56,11 +56,11 @@ const CONFIG = {
 
     // === GENETIC ALGORITHM ===
     ga: {
-        eliteCount: 5,
-        championOffspring: 400,            // Mutated copies of #1 best agent
-        championMutationAmount: 0.15,      // Lower mutation for champion offspring
-        mutationRate: 0.3,
-        mutationAmount: 0.3,
+        eliteCount: 10,
+        championOffspring: 800,            // Mutated copies of #1 best agent
+        championMutationAmount: 0.08,      // Lower mutation for champion offspring
+        mutationRate: 0.25,
+        mutationAmount: 0.25,
         crossoverRate: 0.5,
         breedingPoolPercent: 0.3,
         tournamentSize: 5,
