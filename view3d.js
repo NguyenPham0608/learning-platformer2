@@ -15,8 +15,10 @@ class View3D {
         this.scene.fog = new THREE.Fog(0x1a1a2e, 100, 500);
 
         // Camera - wider FOV for less claustrophobic feel
-        this.camera = new THREE.PerspectiveCamera(90, this.width / this.height, 1, 1000);
+        this.camera = new THREE.PerspectiveCamera(110, this.width / this.height, 1, 1000);
         this.camera.position.y = 20;
+
+        this.smoothedAngle = 0;
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true });
@@ -136,14 +138,29 @@ class View3D {
             this.buildMaze(maze);
         }
 
-        // Update camera
+        // Smooth the camera angle using lerp
+        const lerpFactor = 0.03; // Lower = smoother but more lag, higher = more responsive
+
+        // Handle angle wrapping for smooth interpolation
+        let angleDiff = agent.angle - this.smoothedAngle;
+        while (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+        while (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+
+        this.smoothedAngle += angleDiff * lerpFactor;
+
+        // Keep smoothedAngle in reasonable range
+        while (this.smoothedAngle > Math.PI) this.smoothedAngle -= 2 * Math.PI;
+        while (this.smoothedAngle < -Math.PI) this.smoothedAngle += 2 * Math.PI;
+
+        // Update camera position (follows agent directly)
         this.camera.position.x = agent.x;
         this.camera.position.z = agent.y;
         this.camera.position.y = 25;
 
+        // Use smoothed angle for look direction
         const lookDist = 100;
-        const lookX = agent.x + Math.cos(agent.angle) * lookDist;
-        const lookZ = agent.y + Math.sin(agent.angle) * lookDist;
+        const lookX = agent.x + Math.cos(this.smoothedAngle) * lookDist;
+        const lookZ = agent.y + Math.sin(this.smoothedAngle) * lookDist;
         this.camera.lookAt(lookX, 20, lookZ);
 
         // Update flashlight

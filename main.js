@@ -14,7 +14,7 @@ class Simulation {
             mazeCols: 6,
             mazeRows: 6,
             cellSize: 60,
-            populationSize: 1500,
+            populationSize: 2500,
             maxGenerationTime: 600, // frames before auto-next generation
             showSensors: false,
             showOnlyBest: false,
