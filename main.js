@@ -55,6 +55,11 @@ class Simulation {
         this.running = false;
         this.bestAgent = null;
 
+        this.allTimeBestBrain = null;
+        this.allTimeBestFitness = 0;
+        this.allTimeBestAgent = null;
+
+
         // Initialize population
         this.#initPopulation();
 
@@ -120,6 +125,13 @@ class Simulation {
             }
         }
 
+        // Track all-time best
+        if (bestFitness > this.allTimeBestFitness) {
+            this.allTimeBestFitness = bestFitness;
+            this.allTimeBestBrain = NeuralNetwork.clone(this.bestAgent.brain);
+            this.allTimeBestAgent = this.bestAgent;
+        }
+
         // Test mode: reset single agent when it dies
         if (this.testMode) {
             if (aliveCount === 0) {
@@ -169,22 +181,25 @@ class Simulation {
         if (this.config.showOnlyBest) {
             // Only draw best agent
             if (this.bestAgent) {
-                this.bestAgent.draw(this.ctx, this.config.showSensors);
+                const isAllTimeBest = this.bestAgent === this.allTimeBestAgent;
+                this.bestAgent.draw(this.ctx, this.config.showSensors, isAllTimeBest);
             }
         } else {
             // Draw all agents (dead ones faded)
             for (const agent of this.agents) {
                 const isBest = agent === this.bestAgent;
-                agent.draw(this.ctx, isBest && this.config.showSensors);
+                const isAllTimeBest = agent === this.allTimeBestAgent;
+                agent.draw(this.ctx, isBest && this.config.showSensors, isAllTimeBest);
             }
 
             // Draw best on top
             if (this.bestAgent) {
-                this.bestAgent.draw(this.ctx, this.config.showSensors);
+                const isAllTimeBest = this.bestAgent === this.allTimeBestAgent;
+                this.bestAgent.draw(this.ctx, this.config.showSensors, isAllTimeBest);
             }
         }
         this.#renderNetwork();
-        
+
         // Render 3D view
         this.#render3DView();
     }
@@ -221,13 +236,34 @@ class Simulation {
     }
 
     #enterTestMode() {
-        if (!this.bestAgent) {
-            alert('No best agent to test!');
+        // Priority: 1) Saved brain, 2) All-time best, 3) Current best
+        let brainToTest = null;
+        let brainSource = '';
+
+        // Check for saved brain first
+        const savedBrain = this.ga.loadBrain();
+        if (savedBrain) {
+            brainToTest = savedBrain;
+            brainSource = 'saved brain from localStorage';
+        }
+        // Then check all-time best
+        else if (this.allTimeBestBrain) {
+            brainToTest = NeuralNetwork.clone(this.allTimeBestBrain);
+            brainSource = `all-time best (fitness: ${this.allTimeBestFitness.toFixed(2)})`;
+        }
+        // Fall back to current best
+        else if (this.bestAgent) {
+            brainToTest = NeuralNetwork.clone(this.bestAgent.brain);
+            brainSource = 'current best agent';
+        }
+
+        if (!brainToTest) {
+            alert('No brain available to test!');
             return;
         }
 
         this.testMode = true;
-        this.testBrain = NeuralNetwork.clone(this.bestAgent.brain);
+        this.testBrain = brainToTest;
 
         // Create single agent with best brain
         this.agents = [new Agent(
@@ -243,6 +279,10 @@ class Simulation {
         document.getElementById('btnTestMode').style.display = 'none';
         document.getElementById('btnExitTest').style.display = 'inline-block';
         document.getElementById('testModeInfo').style.display = 'block';
+        document.getElementById('testModeInfo').querySelector('.help').textContent =
+            `Testing ${brainSource}. Generate new mazes to test generalization.`;
+
+        console.log(`Test mode: using ${brainSource}`);
     }
 
     #exitTestMode() {
@@ -329,6 +369,7 @@ class Simulation {
                 mutationRate: 0.2,
                 mutationAmount: 0.3
             });
+            this.allTimeBestAgent = null;
             this.maze.generate();
             this.#initPopulation();
             document.getElementById('generation').textContent = '0';

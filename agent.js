@@ -381,7 +381,7 @@ class Agent {
         return Math.max(CONFIG.fitness.minFitness, fitness);
     }
 
-    draw(ctx, showSensors = false) {
+    draw(ctx, showSensors = false, isAllTimeBest = false) {
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.angle);
@@ -400,13 +400,17 @@ class Agent {
         } else if (!this.alive) {
             ctx.fillStyle = '#888';
             ctx.strokeStyle = '#444';
+        } else if (isAllTimeBest) {
+            // All-time best: red/orange highlight
+            ctx.fillStyle = '#ff4444';
+            ctx.strokeStyle = '#cc0000';
         } else {
             ctx.fillStyle = '#4af';
             ctx.strokeStyle = '#28c';
         }
         if (this.alive) {
 
-            ctx.lineWidth = 2;
+            ctx.lineWidth = isAllTimeBest ? 3 : 2;
             ctx.beginPath();
             ctx.arc(0, 0, radius, 0, Math.PI * 2);
             ctx.fill();
